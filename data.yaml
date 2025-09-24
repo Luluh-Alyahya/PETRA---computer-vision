@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 3
+names: ['rainbow', 'sheen', 'truecolor']
+
+roboflow:
+  workspace: objectdetectionfruits-moegm
+  project: oil-spill-detection-vtqnp
+  version: 3
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/objectdetectionfruits-moegm/oil-spill-detection-vtqnp/dataset/3

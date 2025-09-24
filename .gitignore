@@ -1,0 +1,46 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+.conda/
+
+# VS Code settings
+.vscode/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Data and large files (غيّريها حسب مجلداتك)
+*.tif
+*.tiff
+*.bmp
+*.npy
+*.npz
+*.csv
+*.hdf5
+*.pt
+*.pth
+*.ckpt
+*.log
+
+# Model weights / checkpoints
+models/
+checkpoints/
+
+# Temporary files
+*.DS_Store
+Thumbs.db
+
+# Environment files
+*.env
+.envrc
+
+# Output folders
+outputs/
+runs/

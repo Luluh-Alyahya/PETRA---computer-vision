@@ -1,0 +1,23 @@
+name: oilenv
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - numpy
+  - pandas
+  - matplotlib
+  - scikit-image
+  - opencv
+  - geopandas
+  - rasterio
+  - shapely
+  - fiona
+  - pyproj
+  - rtree
+  - gdal
+  - jupyterlab
+  - ipykernel
+  - pip:
+      - tqdm
+      - albumentations
