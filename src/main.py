@@ -333,7 +333,7 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
-tabs = st.tabs(["Intro", "Satellite", "Evaluation", "Test Model"])
+tabs = st.tabs(["Intro", "Evaluation", "Test Model"])
 
 # Show video banner only on tabs[1] and tabs[2]
 active_tab_index = st.session_state.get("active_tab_index", 0)
