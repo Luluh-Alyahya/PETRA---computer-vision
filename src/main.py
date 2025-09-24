@@ -5,7 +5,6 @@ import time
 import base64
 import requests
 import streamlit as st
-import pydeck as pdk
 from PIL import Image
 
 # ---------------------------
@@ -24,20 +23,12 @@ FASTAPI_URL = os.getenv("FASTAPI_URL", "https://fastapipetra-production.up.railw
 BACKGROUND_IMAGE_PATH = str(BASE_DIR / "background.png")
 INTRO_VIDEO_PATH = str(BASE_DIR / "earth_zoom.mp4")
 
-# Sample demo points (edit/expand as you like)
-DEMO_COORDS = [
-    {"name": "Detection #1", "lat": 26.315, "lon": 50.103, "conf": 0.91},
-    {"name": "Detection #2", "lat": 26.420, "lon": 49.978, "conf": 0.78},
-    {"name": "Detection #3", "lat": 26.230, "lon": 50.205, "conf": 0.62},
-]
-
 
 # ---------------------------
 # HELPERS
 # ---------------------------
 def _as_data_uri(path_or_url: str, mime: str) -> str:
     if path_or_url.lower().startswith("http"):
-        # Streamlit can use remote urls directly; we only need data URI for local assets
         return path_or_url
     with open(path_or_url, "rb") as f:
         b64 = base64.b64encode(f.read()).decode("utf-8")
@@ -48,19 +39,14 @@ def set_background_image(path_or_url: str):
     st.markdown(
         f"""
         <style>
-        /* Set the whole main container background to your image */
         [data-testid="stAppViewContainer"] {{
             background: url("{uri}") no-repeat center center fixed !important;
             background-size: cover !important;
             background-color: transparent !important;
         }}
-
-        /* Make main content transparent to see the background */
         .stApp, .main, .block-container {{
             background-color: rgba(0,0,0,0) !important;
         }}
-
-        /* Remove top header background */
         header[data-testid="stHeader"] {{
             background: rgba(0,0,0,0) !important;
         }}
@@ -86,45 +72,7 @@ def show_brandbar():
         unsafe_allow_html=True,
     )
 
-
-# def call_fastapi_predict_file(file_bytes: bytes, filename: str):
-#     """Send image to FastAPI backend for prediction"""
-#     try:
-#         resp = requests.post(
-#             f"{FASTAPI_URL}/predict",
-#             files={"file": (filename, file_bytes, "image/jpeg")},
-#             timeout=60,
-#         )
-#         if resp.ok:
-#             data = resp.json()
-#             return True, {
-#                 "Total Detections": data.get("total_detections"),
-#                 "Detections": data.get("detections"),
-#                 "Processing Time (s)": data.get("processing_time"),
-#             }
-#         else:
-#             return False, {"error": f"{resp.status_code}: {resp.text}"}
-#     except Exception as e:
-#         return False, {"error": str(e)}
-
-
-# def call_fastapi_predict_url(image_url: str):
-#     # Alternative pattern: JSON with image URL
-#     try:
-#         resp = requests.post(
-#             f"{FASTAPI_URL}/predict",
-#             json={"url": image_url},
-#             timeout=60,
-#         )
-#         if resp.ok:
-#             return True, resp.json()
-#         return False, {"error": f"{resp.status_code}: {resp.text}"}
-#     except Exception as e:
-#         return False, {"error": str(e)}
-
-
 def call_fastapi_predict_with_visual(file_bytes: bytes, filename: str):
-    """Send image to FastAPI and get back results + annotated image"""
     try:
         resp = requests.post(
             f"{FASTAPI_URL}/predict",
@@ -139,7 +87,6 @@ def call_fastapi_predict_with_visual(file_bytes: bytes, filename: str):
         return False, {"error": str(e)}
 
 def call_fastapi_predict_url_with_visual(image_url: str):
-    """Send URL to FastAPI and get back results + annotated image"""
     try:
         resp = requests.post(
             f"{FASTAPI_URL}/predict-url",
@@ -154,31 +101,22 @@ def call_fastapi_predict_url_with_visual(image_url: str):
         return False, {"error": str(e)}
 
 def display_detection_results(data):
-    """Display detection results with annotated image"""
     col1, col2 = st.columns([1.3, 1])
-    
     with col1:
         st.subheader("📸 Detection Results")
         if "annotated_image" in data and data["annotated_image"]:
-            # Decode base64 image
-            import base64
             image_data = base64.b64decode(data["annotated_image"])
             image = Image.open(io.BytesIO(image_data))
             st.image(image, caption="🎯 Detected Oil Spills", use_container_width=True)
         else:
             st.info("No annotated image available")
-        
     with col2:
         st.subheader("📊 Detection Summary")
-        
-        # Summary metrics
         col_a, col_b = st.columns(2)
         with col_a:
             st.metric("🔍 Total Detections", data.get("total_detections", 0))
         with col_b:
             st.metric("⚡ Processing Time", f"{data.get('processing_time', 0)}s")
-        
-        # Individual detections
         if data.get("detections"):
             st.subheader("🔍 Individual Detections")
             for i, detection in enumerate(data["detections"], 1):
@@ -188,7 +126,6 @@ def display_detection_results(data):
                         st.metric("Confidence", f"{detection['confidence']}")
                     with col_y:
                         st.metric("Area Coverage", f"{detection['area_percentage']}%")
-                    
                     bbox = detection['bbox']
                     st.write(f"**📍 Location:** ({bbox['x1']}, {bbox['y1']}) → ({bbox['x2']}, {bbox['y2']})")
         else:
@@ -201,9 +138,6 @@ def display_detection_results(data):
 if "intro_done" not in st.session_state:
     st.session_state.intro_done = False
 
-# Intro logic:
-#   - If not done: show video + "Enter" button
-#   - After press: mark done and rerun to load background + tabs
 if not st.session_state.intro_done:
     st.markdown(
         """
@@ -246,9 +180,7 @@ st.markdown(f"""
     box-shadow: 0 8px 30px rgba(0,0,0,0.5);
     margin-bottom: 2.5rem;
     margin-top: 2.5rem;
-            
 }}
-
 .hero-container video {{
     position: absolute;
     top: 50%;
@@ -259,30 +191,7 @@ st.markdown(f"""
     object-fit: cover;
     filter: brightness(0.65) contrast(1.2);
 }}
-
-.hero-overlay {{
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: #fff;
-    text-align: center;
-    z-index: 2;
-}}
-
-.hero-overlay h1 {{
-    font-size: 3.5rem;
-    margin-bottom: 0.5rem;
-    text-shadow: 0 4px 12px rgba(0,0,0,0.7);
-}}
-
-.hero-overlay p {{
-    font-size: 1.5rem;
-    opacity: 0.85;
-    text-shadow: 0 3px 8px rgba(0,0,0,0.6);
-}}
 </style>
-
 <div class="hero-container">
   <video autoplay muted loop playsinline>
     <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
@@ -298,14 +207,12 @@ show_brandbar()
 
 st.markdown("""
 <style>
-/* Make tabs bigger and styled */
 .stTabs [role="tablist"] {
     gap: 24px;
     justify-content: center;
     border-bottom: 2px solid rgba(255,255,255,0.2);
     margin-bottom: 30px;
 }
-
 .stTabs [role="tab"] {
     font-size: 1.2rem !important;
     font-weight: 600 !important;
@@ -317,7 +224,6 @@ st.markdown("""
     border: 2px solid rgba(255,255,255,0.1);
     border-bottom: none !important;
 }
-
 .stTabs [role="tab"][aria-selected="true"] {
     background: rgba(0, 0, 0, 0.55) !important;
     color: #ffffff !important;
@@ -325,7 +231,6 @@ st.markdown("""
     border: 2px solid rgba(255,255,255,0.25);
     border-bottom: none !important;
 }
-
 .stTabs [role="tab"]:hover {
     background: rgba(255,255,255,0.1);
     color: #fff !important;
@@ -333,27 +238,9 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
-tabs = st.tabs(["Intro", "Evaluation", "Test Model"])
 
-# Show video banner only on tabs[1] and tabs[2]
-active_tab_index = st.session_state.get("active_tab_index", 0)
-if active_tab_index != 0:
-    st.markdown(
-        """
-        <style>
-        .hero-video {
-            width: 100%;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 0 25px rgba(0,0,0,0.4);
-            margin-bottom: 2rem;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-    with open(INTRO_VIDEO_PATH, "rb") as f:
-        st.video(f.read())
+# 🚨 عدلنا هنا: شلنا Satellite
+tabs = st.tabs(["Intro", "Evaluation", "Test Model"])
 
 # ---------------------------
 # TAB 1: INTRO
@@ -377,7 +264,7 @@ with tabs[0]:
     - **Image Preprocessing:** Images are enhanced, normalized, and resized for YOLO input.
     - **Data Augmentation:** Improves generalization across different lighting, angles, and resolutions.
     - **Model Architecture:**  YOLO Architecture. with 125 layers
-    - **Deployment:** FastAPI backend for prediction + Streamlit front-end with a 3D satellite map view.
+    - **Deployment:** FastAPI backend for prediction + Streamlit front-end.
 
     ### 🌊 Why It Matters
     - Oil spills threaten marine ecosystems and coastal economies.
@@ -390,47 +277,13 @@ with tabs[0]:
     - Provide API endpoints for integration with maritime authorities
     """)
 
-    st.info("Scroll to the next tabs to explore the Satellite demo and run your own predictions.")
+    st.info("Scroll to the next tabs to explore the evaluation and run your own predictions.")
 
 
 # ---------------------------
-# TAB 2: SATELLITE
+# TAB 2: EVALUATION
 # ---------------------------
 with tabs[1]:
-    st.markdown("### Satellite View (Demo Points)")
-    st.caption("Tip: zoom & pan. Style and points are customizable.")
-
-    mapbox_token = os.getenv("MAPBOX_API_KEY","pk.eyJ1IjoiZmFpc2FsODg4MzAwMyIsImEiOiJjbWZvN3gzMW4wMzdjMmxyMnoya29pMGF4In0.RhW7PcjNshWLLxC8nAi0Gw")
-
-    layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=[{"lat": d["lat"], "lon": d["lon"], "name": d["name"], "conf": d["conf"]} for d in DEMO_COORDS],
-        get_position='[lon, lat]',
-        get_fill_color='[255 * (1-conf), 255 * conf, 30, 200]',
-        get_radius=2500,
-        pickable=True,
-    )
-
-    view_state = pdk.ViewState(latitude=26.35, longitude=50.05, zoom=6.5, pitch=30, bearing=0)
-    tooltip = {"html": "<b>{name}</b><br/>Confidence: {conf}", "style": {"color": "white"}}
-
-    r = pdk.Deck(
-        layers=[layer],
-        initial_view_state=view_state,
-        tooltip=tooltip,
-        map_style="mapbox://styles/mapbox/streets-v12",  # 🌈 colorful style
-        api_keys={"mapbox": mapbox_token},
-    )
-
-    st.pydeck_chart(r, use_container_width=True)
-
-
-    with st.expander("Demo Coordinates"):
-        st.code("\n".join([f"({d['lat']}, {d['lon']})  conf={d['conf']}" for d in DEMO_COORDS]), language="text")
-# ---------------------------
-# TAB 3: EVALUATION
-# ---------------------------
-with tabs[2]:
     st.markdown("## 🧠 Evaluation of Petra YOLO Model")
     st.caption("Architecture • Labels • Performance Metrics")
 
@@ -438,110 +291,37 @@ with tabs[2]:
     st.markdown("### 📐 YOLO Architecture")
     st.markdown("""
 ### **A. Backbone (Feature Extraction):**
-
-- **Purpose**: Extract hierarchical features from input images
-- **Structure**: Series of convolutional layers with residual connections
-- **Model**: 125 layers, starts with 3→64→128 channels
-- **Key Features**:
-    - Cross Stage Partial (CSP) connections for gradient flow
-    - Spatial Pyramid Pooling (SPP) for multi-scale features
+- Purpose: Extract hierarchical features from input images
+- Structure: conv layers + residual connections
+- Features: CSP + SPP
 
 ### **B. Neck (Feature Fusion):**
-
-- **Purpose**: Combine features from different scales
-- **Structure**: Feature Pyramid Network (FPN) + Path Aggregation Network (PAN)
-- **Why Important**: Oil spills can appear at different sizes in satellite imagery
+- Purpose: Combine features from different scales
+- Structure: FPN + PAN
+- Why: Oil spills appear in different sizes
 
 ### **C. Head (Detection Output):**
-
-- **Purpose**: Generate final predictions
-- **Outputs**:
-    - **Bounding Box Coordinates**: (x, y, width, height)
-    - **Objectness Score**: Probability an object exists
-    - **Class Probabilities**: Probability for each class (oil spill types)
+- Purpose: Generate final predictions
+- Outputs: bounding boxes, objectness, class probs
 """)
 
     st.info("This model was trained on real satellite images labeled manually as **Oil Spill** or **Gas Spill**.")
 
-    import pathlib
-
-    BASE_DIR = pathlib.Path(__file__).parent.resolve()
-
-
     st.markdown("### 📊 Evaluation Metrics on Validation Set")
+    col1, col2, col3, col4, col5 = st.columns(5)
+    with col1: st.metric("Accuracy", "93.7%")
+    with col2: st.metric("Precision", "85.7%")
+    with col3: st.metric("Recall", "91.9%")
+    with col4: st.metric("F1-Score", "88.7")
+    with col5: st.metric("Loss", "0.847")
 
-    st.markdown("""
-    <style>
-    .metric-box {
-      background: linear-gradient(145deg, rgba(30,30,30,0.95), rgba(15,15,15,0.95));
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 16px;
-      padding: 22px 18px;
-      text-align: center;
-      box-shadow: 0 4px 18px rgba(0,0,0,0.4);
-      transition: all 0.3s ease;
-    }
-    .metric-box:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 25px rgba(0,0,0,0.6);
-    }
-    .metric-title {
-      font-size: 1.1rem;
-      color: #aaa;
-      margin-bottom: 6px;
-    }
-    .metric-value {
-      font-size: 2rem;
-      font-weight: 700;
-      color: #4CAF50;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    col1, col2, col3, col4,col5 = st.columns(5)
-    with col1:
-        st.markdown('<div class="metric-box"><div class="metric-title">Accuracy</div><div class="metric-value">93.7%</div></div>', unsafe_allow_html=True)
-    with col2:
-        st.markdown('<div class="metric-box"><div class="metric-title">Precision</div><div class="metric-value">85.7%</div></div>', unsafe_allow_html=True)
-    with col3:
-        st.markdown('<div class="metric-box"><div class="metric-title">Recall</div><div class="metric-value">91.9%</div></div>', unsafe_allow_html=True)
-    with col4:
-        st.markdown('<div class="metric-box"><div class="metric-title">F1-Score</div><div class="metric-value">88.7</div></div>', unsafe_allow_html=True)
-    with col5:
-        st.markdown('<div class="metric-box"><div class="metric-title">Loss</div><div class="metric-value">0.847</div></div>', unsafe_allow_html=True)
-
-  
-    
-    st.markdown(
-        """
-        <div style="
-            background: rgba(255,255,255,0.04);
-            border-left: 4px solid #4CAF50;
-            padding: 1.2rem 1.5rem;
-            border-radius: 12px;
-            margin-top: 2rem;
-            margin-bottom: 2rem;
-            color: #e0e0e0;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.3);
-        ">
-        Petra's YOLO shows **strong performance** on unseen data:
-        <ul>
-          <li>⚡ High accuracy with balanced precision/recall</li>
-          <li>🌊 Very low false positives on clean ocean images</li>
-          <li>🧠 Robust detection of subtle oil spill patterns</li>
-        </ul>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    
     st.success("✅ Petra achieved over **93.7% accuracy** distinguishing oil spills from clean sea surfaces.")
 
 
 # ---------------------------
 # TAB 3: TEST MODEL
 # ---------------------------
-with tabs[3]:
+with tabs[2]:
     st.markdown("### Run Inference (FastAPI)")
     st.caption(f"Endpoint: `{FASTAPI_URL}`  •  Update with env var FASTAPI_URL")
 
@@ -584,9 +364,3 @@ with tabs[3]:
                 st.info("Preview not available. The file will still be sent to the API.")
 
     st.caption("FastAPI returns annotated images with bounding boxes around detected oil spills.")
-
-
-
-
-
-
